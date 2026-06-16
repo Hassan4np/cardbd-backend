@@ -1,21 +1,18 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-
 model User {
-  id           Int       @id @default(autoincrement())
+  id           String    @id @default(uuid())
   name         String
   email        String    @unique
   phone        String?
   passwordHash String
-  role         String    @default("user") // "user" or "admin"
-  address      String?
+  role         String    @default("user")
   orders       Order[]
   reviews      Review[]
   createdAt    DateTime  @default(now())
@@ -24,7 +21,7 @@ model User {
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
+  id       String    @id @default(uuid())
   name     String    @unique
   img      String?
   products Product[]
@@ -33,7 +30,7 @@ model Category {
 }
 
 model Product {
-  id            Int            @id @default(autoincrement())
+  id            String         @id @default(uuid())
   title         String
   subtitle      String?
   price         Float
@@ -46,10 +43,10 @@ model Product {
   reviewCount   Int            @default(0)
   questionCount Int            @default(0)
   sold          Int            @default(0)
-  badge         String? // e.g., "FLASH SALE"
-  endsIn        String? // e.g., "02:14:37"
-  img           String // Main Image
-  categoryId    Int?
+  badge         String?
+  endsIn        String?
+  img           String
+  categoryId    String?
   category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subImages     ProductImage[]
   meta          ProductMeta[]
@@ -61,8 +58,8 @@ model Product {
 }
 
 model ProductImage {
-  id        Int     @id @default(autoincrement())
-  productId Int
+  id        String  @id @default(uuid())
+  productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   imgUrl    String
 
@@ -70,20 +67,20 @@ model ProductImage {
 }
 
 model ProductMeta {
-  id        Int     @id @default(autoincrement())
-  productId Int
+  id        String  @id @default(uuid())
+  productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  metaType  String // "tag" or "feature"
+  metaType  String
   value     String
 
   @@map("product_meta")
 }
 
 model Review {
-  id           Int      @id @default(autoincrement())
-  productId    Int
+  id           String   @id @default(uuid())
+  productId    String
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId       Int?
+  userId       String?
   user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   customerName String
   title        String?
@@ -94,14 +91,14 @@ model Review {
 }
 
 model Order {
-  id             Int         @id @default(autoincrement())
-  userId         Int?
+  id             String      @id @default(uuid())
+  userId         String?
   user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   email          String
   customerName   String
   address        String
   phone          String
-  status         String      @default("pending") // pending, shipping, delivered
+  status         String      @default("pending")
   method         String      @default("Cash on delivery")
   deliveryCharge Float       @default(0.0)
   total          Float
@@ -112,10 +109,10 @@ model Order {
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId Int?
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   title     String
   price     Float

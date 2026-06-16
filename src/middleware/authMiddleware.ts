@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Request ইন্টারফেস এক্সটেন্ড করা যাতে req.user ব্যবহার করা যায়
 export interface CustomRequest extends Request {
   user?: {
     id: number;
@@ -11,11 +10,15 @@ export interface CustomRequest extends Request {
 }
 
 export const verifyToken = (req: CustomRequest, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
+  // ✅ "Bearer <token>" ফরম্যাট চেক
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
   }
+
+  // ✅ "Bearer " বাদ দিয়ে শুধু token নেওয়া
+  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as CustomRequest['user'];
@@ -27,7 +30,12 @@ export const verifyToken = (req: CustomRequest, res: Response, next: NextFunctio
 };
 
 export const verifyAdmin = (req: CustomRequest, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role === 'admin') {
+  // ✅ verifyToken আগে না চললে user থাকবে না
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required.' });
+  }
+
+  if (req.user.role === 'admin') {
     next();
   } else {
     return res.status(403).json({ success: false, message: 'Access denied. Admins only.' });

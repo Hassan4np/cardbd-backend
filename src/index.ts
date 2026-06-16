@@ -2,8 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import authRoutes from './routes/authRoutes';
-import productRoutes from './routes/productRoutes';
-import orderRoutes from './routes/orderRoutes';
+// import productRoutes from './routes/productRoutes';
+// import orderRoutes from './routes/orderRoutes';
 
 
 const app = express();
@@ -15,12 +15,12 @@ app.use(express.json());
 
 // Routes Connection
 app.use('/api/v1', authRoutes);
-app.use('/api/v1', productRoutes);
-app.use('/api/v1', orderRoutes);
+// app.use('/api/v1', productRoutes);
+// app.use('/api/v1', orderRoutes);
 
 // Base Route
 app.get('/', (_req: Request, res: Response) => {
-  res.send('CartBD E-commerce TypeScript Backend is running smoothly...');
+  res.send('CartBD E-commerce  is running...');
 });
 
 // Start Server

@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
-import prisma from '../config/prisma'; // TypeScript-এ NodeNext নিয়মে রিলেটিভ ইমপোর্টে .js লিখতে হয়
+import prisma from '../config/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+// ✅ Register - সাধারণ user
 export const register = async (req: Request, res: Response) => {
-  const { name, email, phone, password, confirm_password, address } = req.body;
+  const { name, email, phone, password, confirm_password } = req.body;
 
   try {
     if (password !== confirm_password) {
@@ -25,7 +26,6 @@ export const register = async (req: Request, res: Response) => {
         email,
         phone,
         passwordHash: hashedPassword,
-        address,
         role: 'user',
       },
     });
@@ -33,13 +33,14 @@ export const register = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       message: 'Registration successful!',
-      user: { id: newUser.id, name: newUser.name, email: newUser.email },
+      user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
+// ✅ Login
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -65,6 +66,67 @@ export const login = async (req: Request, res: Response) => {
       message: 'Login successful!',
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ✅ Register Admin - secret_key নেই, middleware দিয়ে verify হবে
+export const registerAdmin = async (req: Request, res: Response) => {
+  const { name, email, phone, password, confirm_password } = req.body;
+
+  try {
+    if (password !== confirm_password) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match!' });
+    }
+
+    const userExists = await prisma.user.findUnique({ where: { email } });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'Email already registered!' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const admin = await prisma.user.create({
+      data: {
+        name,
+        email,
+        phone,
+        passwordHash: hashedPassword,
+        role: 'admin',
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Admin registered successfully!',
+      user: { id: admin.id, name: admin.name, email: admin.email, role: admin.role },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ✅ Get All Users - শুধু admin দেখতে পাবে
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      total: users.length,
+      users,
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
