@@ -10,17 +10,17 @@ export interface CustomRequest extends Request {
 }
 
 export const verifyToken = (req: CustomRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+  // ১. হেডার থেকে সরাসরি টোকেন নেওয়া
+  const token = req.headers.authorization;
 
-  // ✅ "Bearer <token>" ফরম্যাট চেক
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // console.log('Received Token:', token);
+
+  if (!token || token.trim() === '') {
     return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
   }
 
-  // ✅ "Bearer " বাদ দিয়ে শুধু token নেওয়া
-  const token = authHeader.split(' ')[1];
-
   try {
+    // ৩. সরাসরি টোকেনটি ভেরিফাই করা
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as CustomRequest['user'];
     req.user = decoded;
     next();
