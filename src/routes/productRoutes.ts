@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createProduct,
   deleteProduct,
+  getFilteredProducts,
   getProductById,
   getProducts,
   getProductsByCategory,
@@ -12,6 +13,7 @@ import { verifyAdmin, verifyToken } from '../middleware/authMiddleware';
 const router = Router();
 
 // Public
+router.get('/filter', getFilteredProducts);
 router.get('/', getProducts);
 // ✅ categoryId → categoryName
 router.get('/category/:categoryName', getProductsByCategory);

@@ -197,7 +197,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 };
 
 
-
 // ✅ Product আপডেট করো
 export const updateProduct = async (req: Request, res: Response) => {
   const id = req.params.id as string;
@@ -317,6 +316,76 @@ export const deleteProduct = async (req: Request, res: Response) => {
       success: true,
       message: 'Product deleted successfully!'
     });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ✅ Get Products Filter category, brand, price range, rating, sort
+export const getFilteredProducts = async (req: Request, res: Response) => {
+  const {
+    category,  // category name
+    brand,
+    minPrice,
+    maxPrice,
+    rating,
+    sort       // "low_to_high" | "high_to_low" | "newest" | "top_rated"
+  } = req.query;
+
+  try {
+    // ✅ Category name → id
+    let categoryId: string | undefined = undefined;
+    if (category) {
+      const cat = await prisma.category.findUnique({
+        where: { name: category as string }
+      });
+
+      if (!cat) {
+        return res.status(404).json({
+          success: false,
+          message: `"${category}" নামের category পাওয়া যায়নি!`
+        });
+      }
+      categoryId = cat.id;
+    }
+
+    // ✅ Filter build করো
+    const where: any = {
+      ...(categoryId && { categoryId }),
+      ...(brand && { brand: { equals: brand as string, mode: 'insensitive' } }),
+      ...(rating && { rating: { gte: parseFloat(rating as string) } }),
+      ...((minPrice || maxPrice) && {
+        price: {
+          ...(minPrice && { gte: parseFloat(minPrice as string) }),
+          ...(maxPrice && { lte: parseFloat(maxPrice as string) }),
+        }
+      }),
+    };
+
+    // ✅ Sort build করো
+    let orderBy: any = { createdAt: 'desc' }; // default
+    if (sort === 'low_to_high') orderBy = { price: 'asc' };
+    if (sort === 'high_to_low') orderBy = { price: 'desc' };
+    if (sort === 'newest') orderBy = { createdAt: 'desc' };
+    if (sort === 'top_rated') orderBy = { rating: 'desc' };
+
+    const products = await prisma.product.findMany({
+      where,
+      include: {
+        category: true,
+        subImages: true,
+        meta: true,
+        reviews: true
+      },
+      orderBy
+    });
+
+    return res.status(200).json({
+      success: true,
+      total: products.length,
+      data: products.map(formatProduct)
+    });
+
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
