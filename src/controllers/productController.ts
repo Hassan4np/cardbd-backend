@@ -17,13 +17,21 @@ export const createProduct = async (req: Request, res: Response) => {
   }
 
   try {
-    // Category খোঁজো
+    // ✅ Category খোঁজো — না পেলে error
     let categoryId: string | null = null;
     if (category_name) {
       const category = await prisma.category.findUnique({
         where: { name: category_name }
       });
-      if (category) categoryId = category.id;
+
+      if (!category) {
+        return res.status(404).json({
+          success: false,
+          message: `"${category_name}" নামের category পাওয়া যায়নি! আগে category তৈরি করো।`
+        });
+      }
+
+      categoryId = category.id;
     }
 
     const newProduct = await prisma.product.create({
@@ -66,13 +74,12 @@ export const createProduct = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       message: 'Product created successfully!',
-      data: newProduct
+      data: formatProduct(newProduct)  // ✅ format করে দাও
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
-
 // ✅ Helper: Product Format
 const formatProduct = (product: any) => ({
   id: product.id,
@@ -147,6 +154,50 @@ export const getProductById = async (req: Request, res: Response) => {
   }
 };
 
+
+// ✅ Category name দিয়ে Products Filter
+export const getProductsByCategory = async (req: Request, res: Response) => {
+  const categoryName = req.params.categoryName as string;
+
+  try {
+    // ✅ আগে category খোঁজো name দিয়ে
+    const category = await prisma.category.findUnique({
+      where: { name: categoryName }
+    });
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: `"${categoryName}" নামের category পাওয়া যায়নি!`
+      });
+    }
+
+    // ✅ category.id দিয়ে products খোঁজো
+    const products = await prisma.product.findMany({
+      where: { categoryId: category.id },
+      include: {
+        category: true,
+        subImages: true,
+        meta: true,
+        reviews: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.status(200).json({
+      success: true,
+      category: category.name,
+      total: products.length,
+      data: products.map(formatProduct)
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
+
 // ✅ Product আপডেট করো
 export const updateProduct = async (req: Request, res: Response) => {
   const id = req.params.id as string;
@@ -181,17 +232,17 @@ export const updateProduct = async (req: Request, res: Response) => {
     const updated = await prisma.product.update({
       where: { id },
       data: {
-        title:      title      ?? exists.title,
-        subtitle:   subtitle   ?? exists.subtitle,
-        price:      price      ? parseFloat(price)    : exists.price,
-        oldPrice:   old_price  ? parseFloat(old_price): exists.oldPrice,
-        brand:      brand      ?? exists.brand,
-        discount:   discount   !== undefined ? parseInt(discount) : exists.discount,
-        offer:      offer      !== undefined ? parseInt(offer)    : exists.offer,
-        des:        des        ?? exists.des,
-        badge:      badge      ?? exists.badge,
-        endsIn:     endsIn     ?? exists.endsIn,
-        img:        img        ?? exists.img,
+        title: title ?? exists.title,
+        subtitle: subtitle ?? exists.subtitle,
+        price: price ? parseFloat(price) : exists.price,
+        oldPrice: old_price ? parseFloat(old_price) : exists.oldPrice,
+        brand: brand ?? exists.brand,
+        discount: discount !== undefined ? parseInt(discount) : exists.discount,
+        offer: offer !== undefined ? parseInt(offer) : exists.offer,
+        des: des ?? exists.des,
+        badge: badge ?? exists.badge,
+        endsIn: endsIn ?? exists.endsIn,
+        img: img ?? exists.img,
         categoryId,
       },
     });
